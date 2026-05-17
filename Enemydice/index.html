@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hikareteku - Scouter Management System v7.1</title>
+    <link rel="stylesheet" href="css/style.css">
+    <meta name="description" content="Scanner de PDL avançado para RPG Hikareteku. Cálculo de dano e potência em escala Management System.">
+</head>
+<body>
+
+    <aside class="sidebar" id="sidebar">
+        <header>
+            <h2>Scanner Core</h2>
+        </header>
+
+        <section class="config-group">
+            <label for="pdl_input">PDL Atacante (Ex: 100A, 50ZA)</label>
+            <input type="text" id="pdl_input" value="1C" placeholder="1C">
+
+            <label for="pdl_output_tier">Letra de Output (Alvo)</label>
+            <input type="text" id="pdl_output_tier" value="A" placeholder="A">
+
+            <label for="arquetipo">Arquétipo de Combate</label>
+            <select id="arquetipo">
+                <option value="curta">Físico (+50%)</option>
+                <option value="longa">Ki (+50%)</option>
+                <option value="equilibrado">Misto (+25%)</option>
+            </select>
+        </section>
+
+        <section class="config-group">
+            <h2>Entrada Manual</h2>
+            <div class="input-row">
+                <div>
+                    <label for="manual_d20">d20</label>
+                    <input type="number" id="manual_d20" placeholder="Auto" min="1" max="20">
+                </div>
+                <div>
+                    <label for="manual_mod">Mod</label>
+                    <input type="number" id="manual_mod" value="0">
+                </div>
+            </div>
+        </section>
+
+        <section class="actions-group">
+            <h2>Ações de Combate</h2>
+            <button onclick="processarTurno('fraco', 120, 1)">Ataque Fraco (DF1)</button>
+            <button onclick="processarTurno('medio', 100, 2)">Ataque Médio (DF2)</button>
+            <button onclick="processarTurno('forte', 80, 3)">Ataque Forte (DF3)</button>
+            <button class="btn-ki" onclick="processarTurno('ki', 95, 3)">Técnica Ki (DF3)</button>
+        </section>
+        
+        <footer class="stats-footer">
+            <div class="stats-row">
+                <span>Determinação:</span>
+                <span class="val-det" id="luck_val">+0</span>
+            </div>
+            <div class="stats-row">
+                <span>Falhas:</span>
+                <span class="val-fail" id="fail_val">0</span>
+            </div>
+            <button class="btn-reset" onclick="limparLog()">Reiniciar Protocolos</button>
+            <button class="btn-return" onclick="triggerNav(event, '../index.html')" style="width: 100%; margin-top: 10px; font-size: 0.85rem; background: var(--phosphor); color: var(--deep-black); font-weight: bold; text-transform: none; border-color: var(--phosphor-dim);">(voltar)</button>
+        </footer>
+    </aside>
+    <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()" title="Retrair painel">⟨</button>
+
+    <main class="main-display">
+        <div id="log">
+            <div class="log-entry">>> SINCRO-SCALING ATIVADO.</div>
+            <div class="log-entry">>> SISTEMA MANAGEMENT SYSTEM V7.1 PRONTO.</div>
+        </div>
+    </main>
+
+    <!-- Data & Logic -->
+    <script src="js/data.js"></script>
+    <script src="js/scouter.js"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const btn = document.getElementById('sidebar-toggle');
+            const collapsed = sidebar.classList.toggle('collapsed');
+            btn.classList.toggle('collapsed', collapsed);
+            btn.textContent = collapsed ? '⟩' : '⟨';
+        }
+    </script>
+    <script>
+        // ── Web Audio Synth retro SFX ───────────────────────────────────
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtxInstance = null;
+
+        function getAudioContext() {
+            if (!audioCtxInstance) {
+                audioCtxInstance = new AudioCtx();
+            }
+            return audioCtxInstance;
+        }
+
+        function playSynthBeep(freq, type, duration, volume) {
+            try {
+                const ctx = getAudioContext();
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = type || 'sine';
+                osc.frequency.setValueAtTime(freq || 440, ctx.currentTime);
+
+                gain.gain.setValueAtTime(volume || 0.03, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + (duration || 0.1));
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + (duration || 0.1));
+            } catch (e) {
+                // Audio context blocked or not supported
+            }
+        }
+
+        function triggerNav(event, url) {
+            event.preventDefault();
+            playSynthBeep(440, 'sawtooth', 0.15, 0.03);
+            playSynthBeep(330, 'square', 0.2, 0.04);
+
+            document.body.style.transition = 'all 0.3s ease-out';
+            document.body.style.opacity = '0';
+            document.body.style.filter = 'brightness(0) blur(8px)';
+
+            // Xenogate toggle button bypass for fade-out
+            const btn = document.getElementById('sidebar-toggle');
+            if (btn) {
+                btn.style.animation = 'none';
+            }
+
+            setTimeout(() => {
+                window.location.href = url;
+            }, 300);
+        }
+    </script>
+</body>
+</html>
