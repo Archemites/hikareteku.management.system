@@ -1,0 +1,529 @@
+/* ═══════════════════════════════════════════════════════════════
+   HIKARETEKU SCOUTER — IBM 5151 / Aperture Science Terminal
+   Phosphor P1 Green CRT emulation  ·  circa 1983
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap');
+
+/* ── Tokens ─────────────────────────────────────────────────── */
+:root {
+    --phosphor:       #33ff33;
+    --phosphor-dim:   #1aaa1a;
+    --phosphor-faint: #0d5a0d;
+    --phosphor-bg:    #001a00;
+    --black:          #0a0a0a;
+    --deep-black:     #020202;
+    --amber-warn:     #ffaa00;
+    --crit-red:       #ff2222;
+    --ki-cyan:        #00ffcc;
+    --gugol-magenta:  #ff00ff;
+    --glow-sm:        0 0 4px  var(--phosphor);
+    --glow-md:        0 0 8px  var(--phosphor), 0 0 16px var(--phosphor-faint);
+    --glow-lg:        0 0 10px var(--phosphor), 0 0 30px var(--phosphor-faint), 0 0 60px rgba(0,255,0,0.08);
+    --glow-text:      0 0 6px  var(--phosphor), 0 0 12px rgba(51,255,51,0.25);
+    --font-term:      'VT323', 'Share Tech Mono', 'Courier New', monospace;
+    --scanline-alpha: 0.06;
+    --border-style:   1px solid var(--phosphor-dim);
+}
+
+/* ── Global Reset & CRT Body ────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 18px; }
+
+body {
+    font-family: var(--font-term);
+    background: var(--deep-black);
+    color: var(--phosphor);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    text-shadow: var(--glow-text);
+    position: relative;
+}
+
+/* ── CRT Scanlines overlay (full screen) ─────────────────── */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, var(--scanline-alpha)) 2px,
+        rgba(0, 0, 0, var(--scanline-alpha)) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+}
+
+/* ── CRT flicker / noise ─────────────────────────────────── */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(
+        ellipse at center,
+        transparent 60%,
+        rgba(0, 0, 0, 0.45) 100%
+    );
+    pointer-events: none;
+    z-index: 9998;
+    animation: crt-flicker 0.045s infinite alternate;
+}
+
+@keyframes crt-flicker {
+    0%   { opacity: 0.97; }
+    100% { opacity: 1; }
+}
+
+/* ── Phosphor warm-up blink on load ──────────────────────── */
+@keyframes boot-glow {
+    0%   { opacity: 0; filter: brightness(0); }
+    30%  { opacity: 0.4; filter: brightness(0.6); }
+    60%  { opacity: 0.8; filter: brightness(1.2); }
+    80%  { opacity: 1; filter: brightness(0.95); }
+    100% { opacity: 1; filter: brightness(1); }
+}
+
+body > * {
+    animation: boot-glow 1.8s ease-out forwards;
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR  —  Control Panel
+   ═══════════════════════════════════════════ */
+.sidebar {
+    width: 400px;
+    min-width: 400px;
+    background:
+        linear-gradient(180deg, rgba(0,26,0,0.6) 0%, var(--deep-black) 100%);
+    border-right: 2px solid var(--phosphor-dim);
+    box-shadow: 2px 0 20px rgba(0, 255, 0, 0.05), inset -1px 0 8px rgba(0, 255, 0, 0.03);
+    padding: 24px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+/* Section headers */
+h2 {
+    color: var(--phosphor);
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 4px;
+    padding-bottom: 8px;
+    margin-top: 16px;
+    border-bottom: 1px dashed var(--phosphor-faint);
+    text-shadow: var(--glow-md);
+    position: relative;
+}
+
+h2::before {
+    content: "► ";
+    font-size: 0.7rem;
+    color: var(--phosphor-dim);
+}
+
+header h2 {
+    font-size: 1rem;
+    letter-spacing: 6px;
+    margin-top: 0;
+    border-bottom: 2px solid var(--phosphor-dim);
+    padding-bottom: 12px;
+    text-shadow: var(--glow-lg);
+}
+
+header h2::before {
+    content: "╔══ ";
+}
+
+header h2::after {
+    content: " ══╗";
+}
+
+/* ── Labels ──────────────────────────────────────────────── */
+label {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.7rem;
+    font-weight: normal;
+    color: var(--phosphor-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 3px var(--phosphor-faint);
+}
+
+/* ── Inputs & Selects ────────────────────────────────────── */
+input, select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--deep-black);
+    color: var(--phosphor);
+    border: 1px solid var(--phosphor-faint);
+    border-radius: 0;
+    font-family: var(--font-term);
+    font-size: 1rem;
+    text-transform: uppercase;
+    text-shadow: var(--glow-text);
+    transition: all 0.2s ease;
+    caret-color: var(--phosphor);
+}
+
+input::placeholder {
+    color: var(--phosphor-faint);
+    text-shadow: none;
+}
+
+input:hover, select:hover {
+    border-color: var(--phosphor-dim);
+    box-shadow: 0 0 6px rgba(51, 255, 51, 0.15);
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--phosphor);
+    box-shadow: var(--glow-md), inset 0 0 10px rgba(51, 255, 51, 0.05);
+    background: rgba(0, 20, 0, 0.8);
+}
+
+/* Blinking caret simulation */
+input:focus {
+    animation: caret-pulse 1s step-end infinite;
+}
+
+@keyframes caret-pulse {
+    0%, 100% { border-right-color: var(--phosphor); }
+    50%      { border-right-color: transparent; }
+}
+
+select option {
+    background: var(--black);
+    color: var(--phosphor);
+}
+
+.input-row {
+    display: flex;
+    gap: 12px;
+}
+
+.input-row div {
+    flex: 1;
+}
+
+/* ═══════════════════════════════════════════
+   BUTTONS  —  Terminal Commands
+   ═══════════════════════════════════════════ */
+button {
+    width: 100%;
+    padding: 12px 16px;
+    cursor: pointer;
+    border: 1px solid var(--phosphor-dim);
+    background: transparent;
+    color: var(--phosphor);
+    font-family: var(--font-term);
+    font-size: 0.95rem;
+    font-weight: normal;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: var(--glow-text);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.15s ease;
+    margin-top: 4px;
+}
+
+/* Sweep glow on hover */
+button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(51, 255, 51, 0.08),
+        rgba(51, 255, 51, 0.15),
+        rgba(51, 255, 51, 0.08),
+        transparent
+    );
+    transition: left 0.4s ease;
+}
+
+button:hover::before {
+    left: 100%;
+}
+
+button:hover {
+    background: rgba(51, 255, 51, 0.1);
+    border-color: var(--phosphor);
+    color: #fff;
+    text-shadow: 0 0 8px var(--phosphor), 0 0 16px var(--phosphor);
+    box-shadow: var(--glow-md), inset 0 0 20px rgba(51, 255, 51, 0.06);
+}
+
+button:active {
+    background: var(--phosphor);
+    color: var(--deep-black);
+    text-shadow: none;
+    transform: scale(0.98);
+    box-shadow: var(--glow-lg);
+}
+
+/* ── Ki Button (cyan variant) ────────────────────────────── */
+.btn-ki {
+    color: var(--ki-cyan);
+    border-color: rgba(0, 255, 204, 0.35);
+    text-shadow: 0 0 6px var(--ki-cyan), 0 0 12px rgba(0, 255, 204, 0.2);
+}
+
+.btn-ki::before {
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(0, 255, 204, 0.08),
+        rgba(0, 255, 204, 0.15),
+        rgba(0, 255, 204, 0.08),
+        transparent
+    );
+}
+
+.btn-ki:hover {
+    background: rgba(0, 255, 204, 0.1);
+    border-color: var(--ki-cyan);
+    color: #fff;
+    text-shadow: 0 0 8px var(--ki-cyan), 0 0 16px var(--ki-cyan);
+    box-shadow: 0 0 8px var(--ki-cyan), 0 0 16px rgba(0, 255, 204, 0.15);
+}
+
+.btn-ki:active {
+    background: var(--ki-cyan);
+    color: var(--deep-black);
+    text-shadow: none;
+}
+
+/* ═══════════════════════════════════════════
+   MAIN DISPLAY  —  CRT Output
+   ═══════════════════════════════════════════ */
+.main-display {
+    flex-grow: 1;
+    background: var(--deep-black);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Phosphor burn-in vignette */
+.main-display::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        ellipse at 50% 50%,
+        rgba(0, 40, 0, 0.15) 0%,
+        transparent 50%,
+        rgba(0, 0, 0, 0.4) 100%
+    );
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Subtle horizontal interference lines */
+.main-display::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 3px,
+        rgba(51, 255, 51, 0.012) 3px,
+        rgba(51, 255, 51, 0.012) 6px
+    );
+    pointer-events: none;
+    z-index: 3;
+    animation: interference 8s linear infinite;
+}
+
+@keyframes interference {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(12px); }
+}
+
+/* ── Log Area ────────────────────────────────────────────── */
+#log {
+    flex-grow: 1;
+    overflow-y: auto;
+    font-size: 1rem;
+    padding: 28px 32px;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(0, 30, 0, 0.25) 0%, transparent 70%),
+        var(--deep-black);
+    line-height: 1.5;
+    position: relative;
+    z-index: 1;
+}
+
+/* ── Log Entries ─────────────────────────────────────────── */
+.log-entry {
+    margin-bottom: 6px;
+    padding: 2px 0;
+    animation: type-in 0.35s ease-out;
+    position: relative;
+}
+
+@keyframes type-in {
+    0%   { opacity: 0; transform: translateY(-20px); filter: blur(2px) brightness(2); }
+    40%  { opacity: 1; filter: blur(0) brightness(1.5); }
+    100% { opacity: 1; transform: translateY(0); filter: blur(0) brightness(1); }
+}
+
+
+/* ═══════════════════════════════════════════
+   TEXT STYLES — Damage, Effects, etc.
+   ═══════════════════════════════════════════ */
+.extenso {
+    color: var(--phosphor-dim);
+    font-size: 0.85em;
+    display: block;
+    margin-top: 3px;
+    text-shadow: 0 0 3px var(--phosphor-faint);
+}
+
+.highlight {
+    color: #ccffcc;
+    font-weight: normal;
+    text-shadow: 0 0 8px var(--phosphor), 0 0 20px rgba(51, 255, 51, 0.4);
+}
+
+.critico {
+    color: var(--crit-red);
+    font-weight: normal;
+    text-shadow: 0 0 8px var(--crit-red), 0 0 20px rgba(255, 34, 34, 0.4);
+    animation: crit-flash 0.6s ease-out;
+}
+
+@keyframes crit-flash {
+    0%   { color: #fff; text-shadow: 0 0 20px #fff, 0 0 40px var(--crit-red); }
+    30%  { color: #ff6666; }
+    100% { color: var(--crit-red); }
+}
+
+.gugol {
+    color: var(--gugol-magenta);
+    text-shadow: 0 0 10px var(--gugol-magenta), 0 0 30px rgba(255, 0, 255, 0.3), 0 0 60px rgba(255, 0, 255, 0.1);
+    font-size: 1.15em;
+    letter-spacing: 3px;
+    animation: gugol-pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes gugol-pulse {
+    0%   { text-shadow: 0 0 10px var(--gugol-magenta), 0 0 30px rgba(255, 0, 255, 0.3); }
+    100% { text-shadow: 0 0 15px var(--gugol-magenta), 0 0 40px rgba(255, 0, 255, 0.5), 0 0 80px rgba(255, 0, 255, 0.15); }
+}
+
+.potencia-inline {
+    color: var(--ki-cyan);
+    font-size: 0.8em;
+    margin-left: 8px;
+    opacity: 0.7;
+    text-shadow: 0 0 4px rgba(0, 255, 204, 0.3);
+}
+
+/* ═══════════════════════════════════════════
+   FOOTER  —  Status Bar
+   ═══════════════════════════════════════════ */
+.stats-footer {
+    margin-top: auto;
+    font-size: 0.85rem;
+    border-top: 1px dashed var(--phosphor-faint);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 4px;
+}
+
+.stats-row:hover {
+    background: rgba(51, 255, 51, 0.03);
+}
+
+.val-det {
+    color: var(--gugol-magenta);
+    text-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
+    letter-spacing: 1px;
+}
+
+.val-fail {
+    color: var(--crit-red);
+    text-shadow: 0 0 8px rgba(255, 34, 34, 0.4);
+    letter-spacing: 1px;
+}
+
+/* ── Reset Button ────────────────────────────────────────── */
+.btn-reset {
+    font-size: 0.75rem;
+    padding: 8px;
+    border-color: rgba(51, 255, 51, 0.15);
+    color: var(--phosphor-faint);
+    letter-spacing: 3px;
+    margin-top: 10px;
+    text-shadow: none;
+}
+
+.btn-reset:hover {
+    border-color: var(--crit-red);
+    color: var(--crit-red);
+    text-shadow: 0 0 6px rgba(255, 34, 34, 0.4);
+    background: rgba(255, 34, 34, 0.05);
+    box-shadow: 0 0 10px rgba(255, 34, 34, 0.1);
+}
+
+.btn-reset:active {
+    background: var(--crit-red);
+    color: var(--deep-black);
+    text-shadow: none;
+}
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR  —  Terminal Style
+   ═══════════════════════════════════════════ */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--deep-black);
+    border-left: 1px solid var(--phosphor-faint);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--phosphor-faint);
+    box-shadow: 0 0 4px var(--phosphor-faint);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--phosphor-dim);
+    box-shadow: var(--glow-sm);
+}
+
+/* ═══════════════════════════════════════════
+   SELECTION
+   ═══════════════════════════════════════════ */
+::selection {
+    background: var(--phosphor);
+    color: var(--deep-black);
+    text-shadow: none;
+}

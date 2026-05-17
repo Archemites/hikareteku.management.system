@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hikareteku - Scouter Hub</title>
+    <meta name="description" content="Portal digital de ferramentas adicionais e controle de combate Hikareteku RPG.">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        /* ── Tokens & Design System ────────────────────────────────── */
+        :root {
+            --phosphor:       #33ff33;
+            --phosphor-dim:   #1aaa1a;
+            --phosphor-faint: #0d5a0d;
+            --black:          #0a0a0a;
+            --deep-black:     #020202;
+            
+            --glow-sm:        0 0 4px var(--phosphor);
+            --glow-md:        0 0 10px var(--phosphor), 0 0 20px var(--phosphor-faint);
+            --glow-lg:        0 0 15px var(--phosphor), 0 0 35px var(--phosphor-faint), 0 0 70px rgba(0,255,0,0.08);
+            --glow-text:      0 0 6px var(--phosphor), 0 0 12px rgba(51,255,51,0.25);
+            
+            --font-term:      'VT323', 'Share Tech Mono', 'Courier New', monospace;
+            --scanline-alpha: 0.07;
+        }
+
+        /* ── Global Styles ─────────────────────────────────────────── */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 20px;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-term);
+            background: var(--deep-black);
+            color: var(--phosphor);
+            text-shadow: var(--glow-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            position: relative;
+            padding: 20px;
+        }
+
+        /* ── CRT Overlays ─────────────────────────────────────────── */
+        .crt-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, var(--scanline-alpha)) 2px,
+                rgba(0, 0, 0, var(--scanline-alpha)) 4px
+            );
+        }
+
+        .crt-flicker {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9998;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+            animation: crt-flicker-anim 0.05s infinite alternate;
+        }
+
+        @keyframes crt-flicker-anim {
+            0% { opacity: 0.96; }
+            100% { opacity: 1; }
+        }
+
+        /* ── Layout & Wrapper ─────────────────────────────────────── */
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+
+        /* ── Header ───────────────────────────────────────────────── */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            width: 100%;
+        }
+
+        .header-title {
+            font-size: 2.2rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            animation: glitch 1s linear infinite alternate;
+            text-shadow: var(--glow-md);
+        }
+
+        .header-subtitle {
+            font-size: 0.9rem;
+            color: var(--phosphor-dim);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            border-bottom: 1px dashed var(--phosphor-faint);
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+
+        /* ── Boot Terminal ───────────────────────────────────────── */
+        .boot-terminal {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(0, 15, 0, 0.5);
+            border: 1px solid var(--phosphor-faint);
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 30px;
+            font-family: var(--font-term);
+            font-size: 0.85rem;
+            text-align: left;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.05);
+        }
+
+        .boot-line {
+            opacity: 0;
+            transform: translateY(5px);
+            transition: all 0.3s ease-out;
+            color: var(--phosphor-dim);
+        }
+
+        .boot-line.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .boot-line.success {
+            color: var(--phosphor);
+            font-weight: bold;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2rem;
+            background-color: var(--phosphor);
+            animation: blink 0.8s infinite;
+            vertical-align: middle;
+            margin-left: 5px;
+            box-shadow: var(--glow-sm);
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        /* ── Hub Grid ────────────────────────────────────────────── */
+        .hub-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 30px;
+            width: 100%;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+
+        .hub-grid.ready {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: all;
+        }
+
+        /* ── Card Styles ──────────────────────────────────────────── */
+        .card {
+            background: rgba(0, 255, 65, 0.02);
+            border: 2px solid var(--phosphor-faint);
+            border-radius: 6px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(0, 255, 65, 0.08) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .card:hover {
+            border-color: var(--phosphor);
+            transform: translateY(-8px);
+            box-shadow: var(--glow-lg), inset 0 0 15px rgba(0, 255, 0, 0.05);
+            background: rgba(0, 255, 65, 0.04);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card:active {
+            transform: translateY(-2px);
+            border-color: #fff;
+            box-shadow: 0 0 20px #fff, 0 0 40px var(--phosphor);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--phosphor-faint);
+            padding-bottom: 12px;
+            transition: border-color 0.3s;
+        }
+
+        .card:hover .card-header {
+            border-color: var(--phosphor-dim);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--phosphor);
+            font-weight: bold;
+        }
+
+        .card-tag {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.6rem;
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid var(--phosphor-dim);
+            padding: 3px 8px;
+            border-radius: 3px;
+            color: var(--phosphor);
+            letter-spacing: 1px;
+        }
+
+        .card-subtitle {
+            font-size: 0.8rem;
+            color: var(--phosphor-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: -5px;
+        }
+
+        .card-desc {
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: #aaa;
+            font-style: italic;
+            margin-bottom: 10px;
+            flex-grow: 1;
+            text-shadow: none;
+            transition: color 0.3s;
+        }
+
+        .card:hover .card-desc {
+            color: #eee;
+        }
+
+        .card-action {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            color: var(--phosphor);
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-top: auto;
+        }
+
+        .card-action::before {
+            content: '►';
+            font-size: 0.65rem;
+            animation: arrow-blink 0.6s infinite alternate;
+        }
+
+        @keyframes arrow-blink {
+            0% { transform: translateX(0); opacity: 0.5; }
+            100% { transform: translateX(4px); opacity: 1; }
+        }
+
+        /* ── Decorative Scan Frame ────────────────────────────────── */
+        .corner-bracket {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--phosphor-faint);
+            pointer-events: none;
+            transition: border-color 0.3s;
+        }
+
+        .card:hover .corner-bracket {
+            border-color: var(--phosphor);
+        }
+
+        .corner-tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+        .corner-tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+        .corner-bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+        .corner-br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+
+        /* ── Glitch & Boot Animations ─────────────────────────────── */
+        @keyframes glitch {
+            0% { transform: skew(0deg); }
+            95% { transform: skew(0deg); }
+            96% { transform: skew(2deg); filter: brightness(1.2); }
+            97% { transform: skew(-1deg); }
+            98% { transform: skew(0deg); }
+            99% { transform: skew(-2deg); filter: contrast(1.5); }
+            100% { transform: skew(0deg); }
+        }
+
+        footer {
+            margin-top: 50px;
+            font-size: 0.65rem;
+            color: var(--phosphor-faint);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        /* ── Responsive Adjustment ────────────────────────────────── */
+        @media (max-width: 768px) {
+            html { font-size: 16px; }
+            .hub-grid { grid-template-columns: 1fr; }
+            .card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CRT Visual Effects -->
+    <div class="crt-overlay"></div>
+    <div class="crt-flicker"></div>
+
+    <div class="container">
+        <header>
+            <h1 class="header-title" data-text="HIKARETEKU OMNI-GOD">HIKARETEKU OMNI-GOD</h1>
+            <p class="header-subtitle">NÚCLEO DIGITAL DE OPERAÇÕES</p>
+        </header>
+
+        <!-- Simulated Scouter Boot Logger -->
+        <div class="boot-terminal" id="terminal">
+            <div class="boot-line">> INICIANDO PROTOCOLOS DE COMANDO SCOUTER...</div>
+            <div class="boot-line">> MONTANDO INTERFACE QUANTICA OMNI-GOD [v14.0]...</div>
+            <div class="boot-line">> VERIFICANDO MÓDULOS DISPONÍVEIS...</div>
+            <div class="boot-line success">> FICHA DO GUERREIRO CARREGADA: OK [Charactersheet]</div>
+            <div class="boot-line success">> NÚCLEO SCANNER DE COMBATE CARREGADO: OK [Enemydice]</div>
+            <div class="boot-line">> APLICANDO FILTRO CRT FÓSFORO VERDE... OK</div>
+            <div class="boot-line success">> AMBIENTE PRONTO. SELECIONE PROTOCOLO DE INTERFACE.<span class="cursor"></span></div>
+        </div>
+
+        <!-- System Selection Hub -->
+        <div class="hub-grid" id="dashboard">
+            
+            <!-- Charactersheet Card -->
+            <a href="./Charactersheet/" class="card" onclick="triggerNav(event, this.href)">
+                <div class="corner-bracket corner-tl"></div>
+                <div class="corner-bracket corner-tr"></div>
+                <div class="corner-bracket corner-bl"></div>
+                <div class="corner-bracket corner-br"></div>
+                
+                <div class="card-header">
+                    <span class="card-title">Scouter Terminal</span>
+                    <span class="card-tag">TÉCNICO</span>
+                </div>
+                <span class="card-subtitle">Ficha do Guerreiro v14.0</span>
+                <p class="card-desc">
+                    Gerenciamento completo da integridade física e Ki. Rolo de dados integrado com log de transmissão. Adicione novas técnicas e realize cálculos complexos de dano baseados em modificadores de STR/INT combinados ao seu multiplicador de PDL. Suporte para carregamento e salvamento de fichas em arquivos JSON de forma instantânea.
+                </p>
+                <div class="card-action">INICIAR TERMINAL</div>
+            </a>
+
+            <!-- Enemydice Card -->
+            <a href="./Enemydice/" class="card" onclick="triggerNav(event, this.href)">
+                <div class="corner-bracket corner-tl"></div>
+                <div class="corner-bracket corner-tr"></div>
+                <div class="corner-bracket corner-bl"></div>
+                <div class="corner-bracket corner-br"></div>
+
+                <div class="card-header">
+                    <span class="card-title">Combat Engine</span>
+                    <span class="card-tag">NÚCLEO COMBATE</span>
+                </div>
+                <span class="card-subtitle">Calculadora Omni-God v7.1</span>
+                <p class="card-desc">
+                    Núcleo avançado de simulação de dano e sincronização de PDL entre adversários. Projetado especificamente para converter de forma rápida números em escalas complexas (Tiers de potência A a Z e prefixos personalizados lendários). Calcule o dano real sofrido por um alvo com base no multiplicador de potência e nas ações físicas ou de Ki do atacante.
+                </p>
+                <div class="card-action">CONECTAR NÚCLEO</div>
+            </a>
+
+        </div>
+
+        <footer>
+            SISTEMA INTEGRADO HIKARETEKU · PROTOCOLO DE TRANSMISSÃO CRIPTOGRAFADO OMNI-GOD v14.0
+        </footer>
+    </div>
+
+    <!-- Retro Sound & Boot Sequence Scripts -->
+    <script>
+        // ── Web Audio Synth retro SFX ───────────────────────────────────
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtxInstance = null;
+
+        function getAudioContext() {
+            if (!audioCtxInstance) {
+                audioCtxInstance = new AudioCtx();
+            }
+            return audioCtxInstance;
+        }
+
+        function playSynthBeep(freq, type, duration, volume) {
+            try {
+                const ctx = getAudioContext();
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = type || 'sine';
+                osc.frequency.setValueAtTime(freq || 440, ctx.currentTime);
+                
+                gain.gain.setValueAtTime(volume || 0.03, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + (duration || 0.1));
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + (duration || 0.1));
+            } catch (e) {
+                // Audio context blocked or not supported
+            }
+        }
+
+        // Play brief high-pitched blip on hover
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                playSynthBeep(650, 'triangle', 0.06, 0.02);
+            });
+        });
+
+        // Click nav effect
+        function triggerNav(event, url) {
+            event.preventDefault();
+            playSynthBeep(880, 'square', 0.25, 0.05);
+            playSynthBeep(440, 'sawtooth', 0.2, 0.03);
+            
+            // Fade out page body slightly before redirecting to enhance premium transition
+            document.body.style.transition = 'all 0.3s ease-out';
+            document.body.style.opacity = '0';
+            document.body.style.filter = 'brightness(0)';
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 300);
+        }
+
+        // ── Boot Sequence Animation ─────────────────────────────────────
+        window.addEventListener('DOMContentLoaded', () => {
+            const terminal = document.getElementById('terminal');
+            const lines = Array.from(terminal.querySelectorAll('.boot-line'));
+            const dashboard = document.getElementById('dashboard');
+
+            // Hide lines initially
+            lines.forEach(line => {
+                line.style.display = 'none';
+            });
+
+            let currentLine = 0;
+
+            function showNextLine() {
+                if (currentLine < lines.length) {
+                    const line = lines[currentLine];
+                    line.style.display = 'block';
+                    
+                    // Trigger sound effect for terminal printing
+                    const isSuccess = line.classList.contains('success');
+                    const beepFreq = isSuccess ? 750 : 500;
+                    const beepVol = isSuccess ? 0.02 : 0.01;
+                    playSynthBeep(beepFreq, 'sine', 0.04, beepVol);
+                    
+                    // Delay a microsecond then set class for CSS transition
+                    setTimeout(() => {
+                        line.classList.add('visible');
+                    }, 20);
+
+                    currentLine++;
+                    // Custom delays per line type to simulate realistic system loading
+                    let delay = 350;
+                    if (currentLine === 3 || currentLine === 4) delay = 500; // Database module scanner load
+                    if (currentLine === lines.length) delay = 600; // Finish line
+
+                    setTimeout(showNextLine, delay);
+                } else {
+                    // Boot complete, play boot sound and fade in selections
+                    setTimeout(() => {
+                        playSynthBeep(987.77, 'sine', 0.15, 0.03); // B5 note
+                        setTimeout(() => {
+                            playSynthBeep(1318.51, 'sine', 0.3, 0.04); // E6 note (resolves to nice retro futuristic high chord)
+                        }, 80);
+                        
+                        // Hide boot logger cursor and show dashboard
+                        const cursor = terminal.querySelector('.cursor');
+                        if (cursor) cursor.style.display = 'none';
+                        dashboard.classList.add('ready');
+                    }, 200);
+                }
+            }
+
+            // Start sequence with a brief initial delay
+            setTimeout(showNextLine, 400);
+        });
+    </script>
+</body>
+</html>

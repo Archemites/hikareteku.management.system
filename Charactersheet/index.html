@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hikareteku - Scouter Terminal v14.0</title>
+    <meta name="description" content="Terminal de gerenciamento de guerreiro Scouter Omni-God.">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="boot-anim">
+
+    <!-- CRT Visual Effects -->
+    <div class="crt-overlay"></div>
+    <div class="crt-flicker"></div>
+
+    <aside class="sidebar">
+        <header>
+            <h2>[SISTEMA DE SCANNER]</h2>
+        </header>
+
+        <section class="dice-roller">
+            <label>Configuração de Dados</label>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="number" id="dice-qty" value="1" min="1" style="width: 60px;">
+                <select id="dice-type" style="flex: 1;">
+                    <option value="20" selected>D20 (Padrão)</option>
+                    <option value="12">D12</option>
+                    <option value="10">D10</option>
+                    <option value="6">D6</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="roll()">EXECUTAR ROLAGEM</button>
+        </section>
+
+        <section class="log-container" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <h2>[LOG DE TRANSMISSÃO]</h2>
+            <div id="roll-log">
+                <div class="log-entry-simple">> AGUARDANDO DADOS...</div>
+            </div>
+            <div style="display: flex; gap: 5px; margin-top: 10px;">
+                <button class="btn-primary" onclick="exportToJson()" style="flex: 2;">SALVAR .JSON</button>
+                <button class="btn-delete" onclick="limparLog()" style="flex: 1; font-size: 0.6rem;">LIMPAR</button>
+            </div>
+            <input type="file" id="load-json" style="display: none;" onchange="importFromJson(event)">
+            <button class="btn-small" onclick="document.getElementById('load-json').click()" style="width: 100%; margin-top: 5px; font-size: 0.6rem; border-style: dashed; opacity: 0.6;">CARREGAR .JSON</button>
+        </section>
+    </aside>
+
+    <main class="main-sheet">
+        <header class="sheet-header">
+            <div class="header-group" style="flex: 2;">
+                <label>Identificação do Guerreiro</label>
+                <input type="text" id="char-name" value="ZAIKO" class="header-input" spellcheck="false">
+            </div>
+            <div class="header-group">
+                <label>Tipo de Ki</label>
+                <select id="ki-type-select" class="header-input" style="font-size: 0.9rem;" onchange="updateKiTheme()">
+                    <option value="normal">Ki Normal</option>
+                    <option value="maligno">Ki Maligno</option>
+                    <option value="purificado">Ki Purificado</option>
+                    <option value="primitivo">Ki Primitivo</option>
+                </select>
+            </div>
+            <div class="header-group">
+                <label>Potência de Luta (PDL)</label>
+                <input type="text" id="pdl-display" value="999z" class="header-input" spellcheck="false">
+            </div>
+        </header>
+
+        <section class="attr-grid">
+            <div class="attr-card">
+                <span class="attr-label">STR</span>
+                <input type="number" id="val-STR" value="10" class="attr-val" oninput="updateMods()">
+                <div class="attr-mod" id="mod-STR">+0</div>
+            </div>
+            <div class="attr-card">
+                <span class="attr-label">PER</span>
+                <input type="number" id="val-PER" value="10" class="attr-val" oninput="updateMods()">
+                <div class="attr-mod" id="mod-PER">+0</div>
+            </div>
+            <div class="attr-card">
+                <span class="attr-label">END</span>
+                <input type="number" id="val-END" value="10" class="attr-val" oninput="updateMods()">
+                <div class="attr-mod" id="mod-END">+0</div>
+            </div>
+            <div class="attr-card">
+                <span class="attr-label">CHA</span>
+                <input type="number" id="val-CHA" value="10" class="attr-val" oninput="updateMods()">
+                <div class="attr-mod" id="mod-CHA">+0</div>
+            </div>
+            <div class="attr-card">
+                <span class="attr-label">INT</span>
+                <input type="number" id="val-INT" value="10" class="attr-val" oninput="updateMods()">
+                <div class="attr-mod" id="mod-INT">+0</div>
+            </div>
+            <div class="attr-card">
+                <span class="attr-label">AGI</span>
+                <input type="number" id="val-AGI" value="10" class="attr-val" oninput="updateMods()">
+                <div class="attr-mod" id="mod-AGI">+0</div>
+            </div>
+            <div class="attr-card">
+                <span class="attr-label">LUK</span>
+                <input type="number" id="val-LUK" value="10" class="attr-val" oninput="updateMods()">
+                <div class="attr-mod" id="mod-LUK">+0</div>
+            </div>
+        </section>
+
+        <nav class="tabs-nav">
+            <button class="tab-btn active" onclick="openTab(event, 'aba-itens')">Inventário</button>
+            <button class="tab-btn" onclick="openTab(event, 'aba-tecnicas')">Arsenal</button>
+            <button class="tab-btn" onclick="openTab(event, 'aba-status')">Status</button>
+            <button class="tab-btn" onclick="openTab(event, 'aba-notas')">Protocolos</button>
+        </nav>
+
+        <div id="aba-itens" class="tab-content active">
+            <div style="margin-bottom: 20px;">
+                <label style="color: var(--zeni-gold); font-size: 0.7rem; letter-spacing: 2px;">RECURSOS FINANCEIROS (ZENI)</label>
+                <input type="text" id="zeni-val" placeholder="Ex: 50.000" style="color: var(--zeni-gold); border-color: var(--zeni-gold); width: 250px; display: block; margin-top: 5px;">
+            </div>
+            <label style="font-size: 0.7rem; letter-spacing: 2px; color: var(--phosphor-dim);">MÓDULOS & EQUIPAMENTOS</label>
+            <textarea id="inventory-val" style="width: 100%; height: 280px; margin-top: 10px;" placeholder="Liste seus itens e equipamentos aqui..."></textarea>
+        </div>
+
+        <div id="aba-tecnicas" class="tab-content">
+            <div class="tech-form-container">
+                <h2>[NOVA TÉCNICA]</h2>
+                <div class="input-group">
+                    <label style="font-size: 0.6rem;">NOME DA TÉCNICA</label>
+                    <input type="text" id="form-name" placeholder="Ex: Galick Gun" style="width: 100%;">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.6rem;">TIPO</label>
+                        <select id="form-type" style="width: 100%;">
+                            <option value="KI">KI</option>
+                            <option value="FIS">FÍSICA</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1; text-align: center;">
+                        <label style="font-size: 0.6rem;">DANO?</label>
+                        <label class="switch" style="display: block; margin: 10px auto 0;">
+                            <input type="checkbox" id="form-has-damage" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label style="font-size: 0.6rem;">EFEITO SECUNDÁRIO</label>
+                    <select id="form-effect" style="width: 100%;">
+                        <option value="NONE">NENHUM</option>
+                        <option value="PIERCE">PERFURAÇÃO</option>
+                        <option value="EXPLODE">EXPLOSÃO</option>
+                        <option value="STUN">PARALISIA</option>
+                        <option value="TRACK">RASTREADOR</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label style="font-size: 0.6rem;">DESCRIÇÃO</label>
+                    <textarea id="form-desc" style="width: 100%; height: 60px; font-size: 0.7rem;"></textarea>
+                </div>
+                <button class="btn-primary" onclick="saveNewTech()">ADICIONAR AO ARSENAL</button>
+            </div>
+            <div id="tech-list" class="tech-grid">
+                <!-- Técnicas injetadas via JS -->
+            </div>
+        </div>
+
+        <div id="aba-status" class="tab-content">
+            <section class="status-section">
+                <div class="status-row">
+                    <div class="status-meta">
+                        <span class="status-label">INTEGRIDADE ESTRUTURAL (HP)</span>
+                        <div class="status-inputs">
+                            <input type="text" id="hp-curr" value="1000" oninput="updateBars()">
+                            <span style="color: var(--phosphor-faint);">/</span>
+                            <input type="text" id="hp-max" value="1000" oninput="updateBars()">
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <div id="hp-bar-fill" class="bar-fill hp-fill"></div>
+                        <div id="hp-bar-label" class="bar-label">100%</div>
+                    </div>
+                    <div style="display: flex; gap: 5px; justify-content: flex-end;">
+                        <input type="text" id="hp-mod" placeholder="MOD" style="width: 60px; font-size: 0.7rem;">
+                        <button onclick="modStat('hp', 1)">+</button>
+                        <button onclick="modStat('hp', -1)">-</button>
+                    </div>
+                </div>
+
+                <div class="status-row">
+                    <div class="status-meta">
+                        <span class="status-label">RESERVA DE ENERGIA (KI)</span>
+                        <div class="status-inputs">
+                            <input type="text" id="ki-curr" value="100" oninput="updateBars()">
+                            <span style="color: var(--phosphor-faint);">/</span>
+                            <input type="text" id="ki-max" value="100" oninput="updateBars()">
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <div id="ki-bar-fill" class="bar-fill ki-fill"></div>
+                        <div id="ki-bar-label" class="bar-label">100%</div>
+                    </div>
+                    <div style="display: flex; gap: 5px; justify-content: flex-end;">
+                        <input type="text" id="ki-mod" placeholder="MOD" style="width: 60px; font-size: 0.7rem;">
+                        <button onclick="modStat('ki', 1)">+</button>
+                        <button onclick="modStat('ki', -1)">-</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div id="aba-notas" class="tab-content">
+            <textarea id="notes-val" style="width: 100%; height: 400px; background: transparent; border: none; color: var(--phosphor); font-size: 0.9rem;" placeholder="Anotações dos protocolos de missão..."></textarea>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/charactersheet.js"></script>
+</body>
+</html>
