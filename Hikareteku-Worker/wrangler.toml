@@ -1,0 +1,7 @@
+name = "hikareteku-worker"
+main = "worker.js"
+compatibility_date = "2024-04-03"
+compatibility_flags = [ "nodejs_compat" ]
+
+[vars]
+MONGODB_URI = "mongodb+srv://archemites:gpCjmcT8OHveuemd@hikareteku.bmo6ril.mongodb.net/?appName=hikareteku"

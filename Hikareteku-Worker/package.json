@@ -1,0 +1,16 @@
+{
+  "name": "hikareteku-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker backend for Hikareteku, connecting directly to MongoDB Atlas.",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "mongodb": "^6.5.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.48.0"
+  }
+}

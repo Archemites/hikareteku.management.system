@@ -1,0 +1,8 @@
+{
+  "name": "hikareteku-rpg",
+  "version": "1.0.0",
+  "description": "Hikareteku RPG static sheet with serverless Cloudflare Pages Functions.",
+  "dependencies": {
+    "mongodb": "^6.5.0"
+  }
+}
